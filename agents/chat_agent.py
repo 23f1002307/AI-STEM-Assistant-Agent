@@ -16,6 +16,9 @@ Question:
 {question}
 
 Answer clearly and accessibly.
+Format the output in a proper semantic manner so that navigating through the information becomes easier with screen readers.
+Use semantic structure for headings, lists, and other elements to make the generated explanation screen reader friendly.
+
 """
 
     response = client.responses.create(

@@ -5,7 +5,6 @@ import uuid
 import json
 
 from graph.workflow import build_graph
-from agents.chat_agent import chat_agent
 
 router = APIRouter()
 
@@ -16,16 +15,21 @@ MEMORY_FILE = "memory.json"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Load memory
+# -------------------- MEMORY --------------------
+
 if os.path.exists(MEMORY_FILE):
     with open(MEMORY_FILE, "r") as f:
         memory_store = json.load(f)
 else:
     memory_store = {}
 
+
 def save_memory():
     with open(MEMORY_FILE, "w") as f:
         json.dump(memory_store, f)
+
+
+# -------------------- ANALYZE --------------------
 
 @router.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
@@ -44,17 +48,13 @@ async def analyze_image(file: UploadFile = File(...)):
             "description": "",
             "structured": "",
             "reasoning": "",
-            "final_output": ""
+            "final_output": "",
+            "question": "",
+            "chat_answer": ""
         })
 
-        # store in memory
-        memory_store[file_id] = {
-            "description": result["description"],
-            "structured": result["structured"],
-            "reasoning": result["reasoning"],
-            "final_output": result["final_output"]
-        }
-
+        # STORE FULL STATE
+        memory_store[file_id] = result
         save_memory()
 
         return {
@@ -66,6 +66,8 @@ async def analyze_image(file: UploadFile = File(...)):
         return {"error": str(e)}
 
 
+# -------------------- CHAT --------------------
+
 @router.post("/chat")
 async def follow_up(data: dict):
     try:
@@ -75,11 +77,19 @@ async def follow_up(data: dict):
         if file_id not in memory_store:
             return {"error": "Session not found"}
 
-        context = memory_store[file_id]
+        previous_state = memory_store[file_id]
 
-        answer = chat_agent(question, context)
+        result = graph.invoke({
+            **previous_state,
+            "question": question,
+            "chat_answer": ""
+        })
 
-        return {"answer": answer}
+        # update memory
+        memory_store[file_id] = result
+        save_memory()
+
+        return {"answer": result["chat_answer"]}
 
     except Exception as e:
         return {"error": str(e)}

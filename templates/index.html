@@ -45,7 +45,7 @@ async function upload() {
 
     currentFileId = data.file_id;
 
-    document.getElementById("result").innerText = data.output;
+    document.getElementById("result").innerHTML = data.output;
 
     document.getElementById("chatSection").style.display = "block";
 }
@@ -71,7 +71,7 @@ async function askQuestion() {
         return;
     }
 
-    document.getElementById("chatResponse").innerText = data.answer;
+    document.getElementById("chatResponse").innerHTML = data.answer;
 }
 </script>
 
