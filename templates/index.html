@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI STEM Accessibility Assistant</title>
+    <title>AI STEM Assistant</title>
     <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
@@ -13,12 +13,20 @@
     <button onclick="upload()">Extract Info</button>
 
     <div id="result"></div>
+
+    <div id="chatSection" style="display:none;">
+        <h3>Ask a follow-up question</h3>
+        <input type="text" id="questionInput" placeholder="Type your question">
+        <button onclick="askQuestion()">Ask</button>
+        <div id="chatResponse"></div>
+    </div>
 </div>
 
 <script>
+let currentFileId = null;
+
 async function upload() {
-    const fileInput = document.getElementById("imageInput");
-    const file = fileInput.files[0];
+    const file = document.getElementById("imageInput").files[0];
 
     const formData = new FormData();
     formData.append("file", file);
@@ -30,7 +38,40 @@ async function upload() {
 
     const data = await response.json();
 
+    if (data.error) {
+        document.getElementById("result").innerText = data.error;
+        return;
+    }
+
+    currentFileId = data.file_id;
+
     document.getElementById("result").innerText = data.output;
+
+    document.getElementById("chatSection").style.display = "block";
+}
+
+async function askQuestion() {
+    const question = document.getElementById("questionInput").value;
+
+    const response = await fetch("/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            file_id: currentFileId,
+            question: question
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+        document.getElementById("chatResponse").innerText = data.error;
+        return;
+    }
+
+    document.getElementById("chatResponse").innerText = data.answer;
 }
 </script>
 

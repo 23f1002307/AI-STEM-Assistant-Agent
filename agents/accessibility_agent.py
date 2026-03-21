@@ -7,6 +7,8 @@ def accessibility_agent(explanation: str):
     prompt = f"""
 Convert this into a screen-reader friendly explanation.
 Use spatial and step-by-step descriptions.
+Format the output in a proper semantic manner so that navigating through the information becomes easier with screen readers.
+Use semantic structure for headings, lists, and other elements to make the generated explanation screen reader friendly.
 
 {explanation}
 """
