@@ -62,3 +62,4 @@ build/
 # =========================
 *.tmp
 *.temp
+memory.json
