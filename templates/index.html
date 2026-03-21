@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI STEM Accessibility Assistant</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>AI STEM Accessibility Assistant</h1>
+
+    <input type="file" id="imageInput">
+    <button onclick="upload()">Extract Info</button>
+
+    <div id="result"></div>
+</div>
+
+<script>
+async function upload() {
+    const fileInput = document.getElementById("imageInput");
+    const file = fileInput.files[0];
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+
+    document.getElementById("result").innerText = data.output;
+}
+</script>
+
+</body>
+</html>
