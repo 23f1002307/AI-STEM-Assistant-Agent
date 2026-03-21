@@ -12,6 +12,7 @@ Return JSON with:
 - type
 - key elements
 - relationships
+-analogies
 """
 
     response = client.responses.create(
