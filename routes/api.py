@@ -15,7 +15,7 @@ MEMORY_FILE = "memory.json"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# -------------------- MEMORY --------------------
+# ---------------- MEMORY ----------------
 
 if os.path.exists(MEMORY_FILE):
     with open(MEMORY_FILE, "r") as f:
@@ -29,7 +29,7 @@ def save_memory():
         json.dump(memory_store, f)
 
 
-# -------------------- ANALYZE --------------------
+# ---------------- STEP 1: ANALYZE ----------------
 
 @router.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
@@ -50,23 +50,70 @@ async def analyze_image(file: UploadFile = File(...)):
             "reasoning": "",
             "final_output": "",
             "question": "",
-            "chat_answer": ""
+            "chat_answer": "",
+            "user_decision": ""
         })
 
-        # STORE FULL STATE
         memory_store[file_id] = result
         save_memory()
 
         return {
             "file_id": file_id,
-            "output": result["final_output"]
+            "preview": result["description"],
+            "message": "Confirm / Reject / Skip to continue"
         }
 
     except Exception as e:
         return {"error": str(e)}
 
 
-# -------------------- CHAT --------------------
+# ---------------- STEP 2: USER DECISION ----------------
+
+@router.post("/decision")
+async def user_decision(data: dict):
+    try:
+        file_id = data.get("file_id")
+        decision = data.get("decision")
+
+        if file_id not in memory_store:
+            return {"error": "Session not found"}
+
+        state = memory_store[file_id]
+
+        # 🔥 REJECT → re-run vision
+        if decision == "reject":
+            result = graph.invoke({
+                **state,
+                "user_decision": "reject"
+            })
+
+            memory_store[file_id] = result
+            save_memory()
+
+            return {
+                "type": "preview",
+                "preview": result["description"],
+                "message": "Reprocessing the image. Please review again."
+            }
+
+        # 🔥 CONFIRM / SKIP → continue pipeline
+        result = graph.invoke({
+            **state,
+            "user_decision": decision
+        })
+
+        memory_store[file_id] = result
+        save_memory()
+
+        return {
+            "type": "final",
+            "output": result["final_output"]
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+# ---------------- CHAT ----------------
 
 @router.post("/chat")
 async def follow_up(data: dict):
@@ -77,17 +124,12 @@ async def follow_up(data: dict):
         if file_id not in memory_store:
             return {"error": "Session not found"}
 
-        previous_state = memory_store[file_id]
+        state = memory_store[file_id]
 
         result = graph.invoke({
-            **previous_state,
-            "question": question,
-            "chat_answer": ""
+            **state,
+            "question": question
         })
-
-        # update memory
-        memory_store[file_id] = result
-        save_memory()
 
         return {"answer": result["chat_answer"]}
 

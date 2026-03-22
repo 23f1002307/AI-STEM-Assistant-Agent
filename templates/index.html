@@ -9,22 +9,42 @@
 <div class="container">
     <h1>AI STEM Accessibility Assistant</h1>
 
+    <!-- Upload Section -->
     <input type="file" id="imageInput">
     <button onclick="upload()">Extract Info</button>
 
+    <!-- Result / Preview -->
     <div id="result"></div>
 
+    <!-- HITL Section -->
+    <div id="hitlSection" style="display:none;">
+        <h3>AI Interpretation Preview</h3>
+        <div id="preview"></div>
+
+        <p><strong>Do you want to continue?</strong></p>
+
+        <button onclick="sendDecision('confirm')">✅ Confirm</button>
+        <button onclick="sendDecision('skip')">⏭ Skip</button>
+        <button onclick="sendDecision('reject')">❌ Reject</button>
+    </div>
+
+    <!-- Final Output -->
+    <div id="finalOutput"></div>
+
+    <!-- Chat Section -->
     <div id="chatSection" style="display:none;">
         <h3>Ask a follow-up question</h3>
         <input type="text" id="questionInput" placeholder="Type your question">
         <button onclick="askQuestion()">Ask</button>
         <div id="chatResponse"></div>
     </div>
+
 </div>
 
 <script>
 let currentFileId = null;
 
+// ---------------- UPLOAD ----------------
 async function upload() {
     const file = document.getElementById("imageInput").files[0];
 
@@ -45,11 +65,60 @@ async function upload() {
 
     currentFileId = data.file_id;
 
-    document.getElementById("result").innerHTML = data.output;
+    // show preview
+    document.getElementById("preview").innerText = data.preview;
 
-    document.getElementById("chatSection").style.display = "block";
+    // show HITL section
+    document.getElementById("hitlSection").style.display = "block";
+
+    // clear previous outputs
+    document.getElementById("finalOutput").innerHTML = "";
+    document.getElementById("chatSection").style.display = "none";
 }
 
+// ---------------- DECISION ----------------
+async function sendDecision(decision) {
+    const response = await fetch("/decision", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            file_id: currentFileId,
+            decision: decision
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+        document.getElementById("finalOutput").innerText = data.error;
+        return;
+    }
+
+    // ---------------- REJECT (RETRY LOOP) ----------------
+    if (data.type === "preview") {
+        document.getElementById("preview").innerText = data.preview;
+
+        document.getElementById("hitlSection").style.display = "block";
+        document.getElementById("finalOutput").innerHTML = "";
+        document.getElementById("chatSection").style.display = "none";
+
+        return;
+    }
+
+    // ---------------- CONFIRM / SKIP ----------------
+    if (data.type === "final") {
+        document.getElementById("finalOutput").innerHTML = data.output;
+
+        document.getElementById("chatSection").style.display = "block";
+        document.getElementById("hitlSection").style.display = "none";
+
+        return;
+    }
+}
+
+// ---------------- CHAT ----------------
 async function askQuestion() {
     const question = document.getElementById("questionInput").value;
 
